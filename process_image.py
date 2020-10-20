@@ -7,6 +7,17 @@ import json
 import threading
 from time import sleep
 
+
+
+import numpy as np
+import cv2 as cv
+import cv2
+from add_pic import *
+from extract_contour_by_tools import *
+from generate_flash import *
+from AttentionedDeepPaint.colorize import *
+from Animate.animate_api import *
+
 def scan_qr():
     global auto_paint_flag
     cap = cv2.VideoCapture(0)
@@ -33,8 +44,16 @@ class ConvLSTM():
         self.cap = cv2.VideoCapture(0)
         # save camera frame
         self.raw_frame = None
+        self.extract_paint_frame = None
         # thread
         self.camera_thread = threading.Thread(target=self.scan_qr)
+        self.driving_video = "src/driving_video/dance7.mp4"
+        self.background_image = "src/backgroud/backgroud.jpeg"
+        self.cloud_image = "src/backgroud/cloud_contour.png"
+        self.animation_video = "src/result_0.mp4"
+        # process video files
+        self.flash_cap = []
+        self.process_picture_num = 0
     def scan_qr(self):
         while self.start_recognize_qr_flag:
             ret, im = self.cap.read()
@@ -138,19 +157,36 @@ class ConvLSTM():
         frame = cv2.imread("padding.png",0)
         cv2.imwrite("gray.png",frame)
         ret,thresh = cv2.threshold(frame,100,255,cv2.THRESH_BINARY_INV)
-        convert = cv2.bitwise_not(thresh)
-        cv2.imwrite("thresh.png",convert)
-        return convert
-    def smart_paint_image(self):
-
+        self.extract_paint_frame = cv2.bitwise_not(thresh)
+        cv2.imwrite("thresh.png",self.extract_paint_frame)
+        return self.extract_paint_frame
+    def generate_animate_flash(self):
+        raw_frame = self.extract_paint_frame
+        ################# step two: auto paint ################
+        colored_frame = paint_color(raw_frame)
+        save_colored_name = "src/temp/colored_frame.png"
+        cv2.imwrite(save_colored_name,colored_frame)
+        ################ step three: extract contour #########
+        transparent_coloed_frame = koutu(save_colored_name)
+        cv2.imwrite("src/temp/transparent_colored.png",transparent_coloed_frame)
+        ############### step four: generate animate ##########
+        image = "src/temp/transparent_colored.png"
+        model = "taichi"
+        save_video_name = "src/result_" + str(self.process_picture_num) + ".mp4"
+        animate(image,self.driving_video,model,save_video_name,save_video_name)
+        ############# step five: generate flash ############
+        flow_picture(self.background_image,self.cloud_image,self.animation_video)
+    
+    def combine_flash(self):
+        pass
 
     def run(self):
         while True:
             if self.raw_frame is not None and not self.start_recognize_qr_flag:
                 self.extract_picture()
-                sleep(10)
+                self.generate_animate_flash()
                 self.start_recognize_qr_flag = True
-                sleep(5)
+                sleep(200)
             
 
 
