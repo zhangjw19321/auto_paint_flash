@@ -9,8 +9,8 @@ from generate_flash import *
 ################## step one: get a picutre #############
 # gril student boy mogu bear sheep
 # may need to convert to ＲGB
-image_file = "src/input/gril.jpeg"
-image_file = "thresh.png"
+image_file = "src/input/bear.jpeg"
+# image_file = "thresh.png"
 raw_frame = cv2.imread(image_file)
 
 ################# step two: auto paint ################
@@ -28,7 +28,8 @@ from Animate.animate_api import *
 image = "src/temp/transparent_colored.png"
 driving_video = "src/driving_video/dance7.mp4"
 model = "taichi"
-animate(image,driving_video,model)
+animate(image,driving_video,model,"src/temp/test_flash/result_03.mp4")
+# animate(image,self.driving_video,model,save_video_name,save_video_name)
 '''
 ############# step five: generate flash ############
 background_image = "src/backgroud/backgroud.jpeg"

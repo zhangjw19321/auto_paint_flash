@@ -17,6 +17,9 @@ from extract_contour_by_tools import *
 from generate_flash import *
 from AttentionedDeepPaint.colorize import *
 from Animate.animate_api import *
+from show_image import *
+from threading_flash import *
+import multiprocessing
 
 def scan_qr():
     global auto_paint_flag
@@ -55,14 +58,14 @@ class ConvLSTM():
         self.flash_cap = []
         self.process_picture_num = 0
     def scan_qr(self):
-        while self.start_recognize_qr_flag:
+        while True:
             ret, im = self.cap.read()
             # im = cv2.imread("picture.png")
             cv2.imshow("im",im)
             cv2.waitKey(30)
             # continue
             decodedObjects = pyzbar.decode(im)
-            if (len(decodedObjects) != 0):
+            if (len(decodedObjects) != 0) and self.start_recognize_qr_flag:
                 info = str(decodedObjects[0].data,encoding = "utf-8")
                 if info == "auto paint":
                     print("start to paint")
@@ -86,7 +89,6 @@ class ConvLSTM():
         # need to modify
         low_blue = np.array([100,43,46])
         high_blue = np.array([124,255,255])
-        print("come into get blue region2")
         mask = cv2.inRange(hsv,low_blue,high_blue)
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3)) 
         opened1 = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel,iterations=1)
@@ -128,6 +130,7 @@ class ConvLSTM():
         # img = cv2.rectangle(img,(left,top),(right,bottom),(255,255,0),2)
         # cv2.drawContours(img,[cnt],0,(0,255,0),3)
         useful_frame_roi = img[top:bottom,left:right]
+        print("come out get blue region")
         return useful_frame_roi
         # cv2.imshow("contours",useful_frame_roi)
         # cv2.waitKey(3000)
@@ -159,34 +162,40 @@ class ConvLSTM():
         ret,thresh = cv2.threshold(frame,100,255,cv2.THRESH_BINARY_INV)
         self.extract_paint_frame = cv2.bitwise_not(thresh)
         cv2.imwrite("thresh.png",self.extract_paint_frame)
+        print("come out extract picture")
         return self.extract_paint_frame
     def generate_animate_flash(self):
+        print("come into generate flash")
         raw_frame = self.extract_paint_frame
         ################# step two: auto paint ################
         colored_frame = paint_color(raw_frame)
         save_colored_name = "src/temp/colored_frame.png"
         cv2.imwrite(save_colored_name,colored_frame)
+        print("step one finish")
         ################ step three: extract contour #########
         transparent_coloed_frame = koutu(save_colored_name)
         cv2.imwrite("src/temp/transparent_colored.png",transparent_coloed_frame)
+        print("step two finish")
         ############### step four: generate animate ##########
         image = "src/temp/transparent_colored.png"
         model = "taichi"
-        save_video_name = "src/result_" + str(self.process_picture_num) + ".mp4"
-        animate(image,self.driving_video,model,save_video_name,save_video_name)
+        save_video_name = "src/temp/test_flash/result_" + str(self.process_picture_num) + ".mp4"
+        self.process_picture_num += 1
+        if self.process_picture_num > 4:
+            self.process_picture_num = 0
+        animate(image,self.driving_video,model,save_video_name)
+        self.start_recognize_qr_flag = True
+        print("come out generate flash")
         ############# step five: generate flash ############
-        flow_picture(self.background_image,self.cloud_image,self.animation_video)
-    
-    def combine_flash(self):
-        pass
-
+        # flow_picture(self.background_image,self.cloud_image,self.animation_video)
     def run(self):
         while True:
             if self.raw_frame is not None and not self.start_recognize_qr_flag:
                 self.extract_picture()
                 self.generate_animate_flash()
+                print("****flash has benn generated")
                 self.start_recognize_qr_flag = True
-                sleep(200)
+                
             
 
 
@@ -201,6 +210,22 @@ class ConvLSTM():
 
 if __name__ == "__main__":
     # frame = cv2.imread("src/picture_with_qr.png")
+    # p = multiprocessing.Process(target = worker, args = (3,))
+    '''
+    video_path = "src/temp/test_flash"    
+    # generate_raw_flash(video_path)
+    f = Flash()
+    combine_flash_thread = multiprocessing.Process(target=f.generate_raw_flash,args=(video_path,))
+    combine_flash_thread.start()
+    print("thread combine flash start")
+
+    show_file_thread = multiprocessing.Process(target=show_image)
+    show_file_thread.start()
+    print("thread show image start")
+    sleep(5)
+    '''
+    os.system("python3 threading_flash.py &")
+    os.system("python3 show_image.py &")
     lstm = ConvLSTM()
     lstm.take_picture_thread()
     lstm.run()
