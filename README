@@ -35,6 +35,9 @@ tqdm==4.24.0
 
 
 3. run the file
+在当前路径下依次启动３个终端，在不同终端先后依次执行脚本
+python threading_flash.py
+python show_image.py
 python process_image.py
 
 

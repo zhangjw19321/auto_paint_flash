@@ -134,6 +134,21 @@ class ConvLSTM():
         return useful_frame_roi
         # cv2.imshow("contours",useful_frame_roi)
         # cv2.waitKey(3000)
+    def resize_user_contour(self):
+        frame = cv2.imread("thresh.png")
+        gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+        _,thresh = cv2.threshold(gray,20,255,cv2.THRESH_BINARY_INV)
+        contours, hier = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        board = 20
+        max_contour_x,max_contour_y,max_contour_w,max_contour_h = 0,0,0,0
+        for cidx,cnt in enumerate(contours):
+            (x, y, w, h) = cv2.boundingRect(cnt)
+            if w * h > max_contour_w * max_contour_h:
+                max_contour_x,max_contour_y,max_contour_w,max_contour_h = (x, y, w, h) 
+        ori = frame[max_contour_y-board:max_contour_y+max_contour_h+2*board,max_contour_x-board:max_contour_x+max_contour_w+2*board]
+        user_contour_frame = cv2.resize(ori,(512,512))
+        # cv2.imwrite("usr.png",user_contour_frame)
+        return user_contour_frame
     def extract_picture(self):
         print("come into extract picture")
         print(self.raw_frame is not None and not self.start_recognize_qr_flag)
@@ -162,8 +177,10 @@ class ConvLSTM():
         ret,thresh = cv2.threshold(frame,100,255,cv2.THRESH_BINARY_INV)
         self.extract_paint_frame = cv2.bitwise_not(thresh)
         cv2.imwrite("thresh.png",self.extract_paint_frame)
+        user_contour_sized_frame = self.resize_user_contour()
+        cv2.imwrite("user_sized_contour.png",user_contour_sized_frame)
         print("come out extract picture")
-        return self.extract_paint_frame
+        return user_contour_sized_frame
     def generate_animate_flash(self):
         print("come into generate flash")
         raw_frame = self.extract_paint_frame
@@ -224,8 +241,8 @@ if __name__ == "__main__":
     print("thread show image start")
     sleep(5)
     '''
-    os.system("python3 threading_flash.py &")
-    os.system("python3 show_image.py &")
+    # os.system("python3 threading_flash.py &")
+    # os.system("python3 show_image.py &")
     lstm = ConvLSTM()
     lstm.take_picture_thread()
     lstm.run()
