@@ -50,7 +50,7 @@ class ConvLSTM():
         self.extract_paint_frame = None
         # thread
         self.camera_thread = threading.Thread(target=self.scan_qr)
-        self.driving_video = "src/driving_video/dance7.mp4"
+        self.driving_video = "src/driving_video/dance_use1.mp4"
         self.background_image = "src/backgroud/backgroud.jpeg"
         self.cloud_image = "src/backgroud/cloud_contour.png"
         self.animation_video = "src/result_0.mp4"
@@ -99,7 +99,7 @@ class ConvLSTM():
         contouts,h = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
         cnt = contouts
         inner_x,inner_y,inner_w,inner_h = 999,999,999,999
-        board = 25
+        board = 30
         for i in cnt:
             #坐标赋值
             x,y,w,h = cv2.boundingRect(i)
@@ -139,7 +139,7 @@ class ConvLSTM():
         gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
         _,thresh = cv2.threshold(gray,20,255,cv2.THRESH_BINARY_INV)
         contours, hier = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        board = 20
+        board = 15
         max_contour_x,max_contour_y,max_contour_w,max_contour_h = 0,0,0,0
         for cidx,cnt in enumerate(contours):
             (x, y, w, h) = cv2.boundingRect(cnt)
@@ -147,6 +147,7 @@ class ConvLSTM():
                 max_contour_x,max_contour_y,max_contour_w,max_contour_h = (x, y, w, h) 
         ori = frame[max_contour_y-board:max_contour_y+max_contour_h+2*board,max_contour_x-board:max_contour_x+max_contour_w+2*board]
         user_contour_frame = cv2.resize(ori,(512,512))
+        # user_contour_frame = ori
         # cv2.imwrite("usr.png",user_contour_frame)
         return user_contour_frame
     def extract_picture(self):
@@ -178,12 +179,14 @@ class ConvLSTM():
         self.extract_paint_frame = cv2.bitwise_not(thresh)
         cv2.imwrite("thresh.png",self.extract_paint_frame)
         user_contour_sized_frame = self.resize_user_contour()
+        self.extract_paint_frame = user_contour_sized_frame
         cv2.imwrite("user_sized_contour.png",user_contour_sized_frame)
         print("come out extract picture")
         return user_contour_sized_frame
     def generate_animate_flash(self):
         print("come into generate flash")
         raw_frame = self.extract_paint_frame
+        cv2.imwrite("raw_frame.png",raw_frame)
         ################# step two: auto paint ################
         colored_frame = paint_color(raw_frame)
         save_colored_name = "src/temp/colored_frame.png"
@@ -200,6 +203,8 @@ class ConvLSTM():
         self.process_picture_num += 1
         if self.process_picture_num > 4:
             self.process_picture_num = 0
+        video_index = random.randint(1,4)
+        self.driving_video = "src/driving_video/dance_use" + str(video_index) + ".mp4"
         animate(image,self.driving_video,model,save_video_name)
         self.start_recognize_qr_flag = True
         print("come out generate flash")
